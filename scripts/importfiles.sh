@@ -1,1 +1,1 @@
-python geoingest.py
+#ruby geoingest.rb blacklight.yml development
