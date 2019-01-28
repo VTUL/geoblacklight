@@ -9,28 +9,28 @@ require 'yaml'
 class DataIngest
 
   @@fields = {
-    "dc:identifier": {required: true},
-    "dc:rights": {required: true},
-    "dct:provenance": {required: true},
-    "dct:references": {required: false},
-    "dc:creator": {required: true},
-    "dc:language": {required: true},
-    "dc:publisher": {required: true},
-    "dc:type": {required: true},
-    "dct:spatial": {required: true},
-    "dct:temporal": {required: false},
-    "dct:issued": {required: false},
-    "ispartof": {required: true},
-    "solr:geom": {required: true},
+    "dc_identifier_s": {required: true},
+    "dc_rights_s": {required: true},
+    "dct_provenance_s": {required: true},
+    "dct_references_s": {required: false},
+    "dc_creator_sm": {required: true},
+    "dc_language_sm": {required: true},
+    "dc_publisher_sm": {required: true},
+    "dc_type_s": {required: true},
+    "dct_spatial_sm": {required: true},
+    "dct_temporal_sm": {required: false},
+    "dct_issued_dt": {required: false},
+    "dct_ispartof_sm": {required: true},
+    "solr_geom": {required: true},
     "georss:polygon": {required: false},
-    "dc:title": {required: true},
-    "dc:description": {required: true},
-    "dc:format": {required: true},
-    "dc:subject": {required: false},
-    "layer:id": {required: true},
-    "layer:modified": {required: false},
-    "layer:slug": {required: true},
-    "layer:geom_type": {required: true}
+    "dc_title_s": {required: true},
+    "dc_description_s": {required: true},
+    "dc_format_s": {required: true},
+    "dc_subject_sm": {required: false},
+    "layer_id_s": {required: true},
+    "layer_modified_dt": {required: false},
+    "layer_slug_s": {required: true},
+    "layer_geom_type_s": {required: true}
   }
     
   def createreport(filename, content)
@@ -55,39 +55,18 @@ class DataIngest
     end
   end
 
-
-  def solrdatahash(content)
-    rec = {} 
+  def formatsolrdata(content)
     timestring = Time.now().strftime("%Y-%m-%dT%H:%M:%SZ") 
 
-    rec['dc_identifier_s'] = content[0]
-    rec['dc_rights_s'] = content[1]
-    rec['dc_title_s'] = content[2]
-    rec['dct_provenance_s'] = content[3]
-    if !content[17].nil?
-      rec['dct_references_s'] = "{\"http://schema.org/downloadUrl\":\"" + content[0] + "\",\"http://www.opengis.net/def/serviceType/ogc/wcs\":\"" + content[17] + "\"}"
+    if !content['dct_references_s'].nil?
+      content['dct_references_s'] = "{\"http://schema.org/downloadUrl\":\"" + content['dc_identifier_s'] + "\",\"http://www.opengis.net/def/serviceType/ogc/wcs\":\"" + content['dct_references_s'] + "\"}"
     end
-    rec['layer_slug_s'] = content[5]
-    if !content[6].nil?
-      gdata = content[6].split(",")
-      rec['solr_geom'] = "ENVELOPE("+ gdata[1] + "," + gdata[3] + "," + gdata[2] + "," + gdata[0] + ")"
-    end
-    rec['dc_creator_sm'] = content[7]
-    rec['dc_description_s'] = content[8]
-    rec['dc_format_s'] = content[9]
-    rec['dc_language_sm'] = content[10]
-    rec['dc_publisher_sm'] = content[11]
-    rec['dc_subject_sm'] = content[13]
-    rec['dc_type_s'] = content[14]
-    rec['dct_isPartOf_sm'] = content[15]
-    rec['dct_issued_s'] = timestring
-    rec['dct_spatial_sm'] = content[18]
-    rec['dct_temporal_sm'] = content[19]
-    rec['layer_geom_type_s'] = content[20]
-    rec['layer_id_s'] = content[21]
-    rec['layer_modified_dt'] = timestring
+    gdata = content['solr_geom'].split(",")
+    content['solr_geom'] = "ENVELOPE("+ gdata[1] + "," + gdata[3] + "," + gdata[2] + "," + gdata[0] + ")"
 
-    return rec
+    content['layer_modified_dt'] = timestring
+
+    return content
   end
 
   def is_number? string
@@ -117,27 +96,42 @@ class DataIngest
     result = ""
     row.each do |key, content|
       begin
-        item = /<(.+)>/.match(key).captures[0].downcase rescue ""
+        if @@fields.key?(key.to_sym) && @@fields[key.to_sym][:required] && content.blank?
+          result += "#{key} is required but empty. "
 
-        if @@fields.key?(item.to_sym) && @@fields[item.to_sym][:required] && content.blank?
-          result += "#{item} is empty. "
-
-        elsif item == "dc:identifier" && !is_valid_url(content)
-          result += "dc_identifier field is not a valid URL. "
+        elsif !is_valid_string?(content)
+          result += "#{key} contains invalid characters. "
+    
+        elsif key == "dc_identifier_s" && !is_valid_url(content)
+          result += "dc_identifier_s field is not a valid URL. "
       
-        elsif item == "solr:geom" && (!content.respond_to?("split") || content.split(",").length != 4)
+        elsif key == "solr_geom" && (!content.respond_to?("split") || content.split(",").length != 4)
           result += "solr_geom field is incorrect. "
 
-        elsif item == "solr:geom" && (!content.respond_to?("split") || !content.split(",").all? {|i| is_number?( i ) })
+        elsif key == "solr_geom" && (!content.respond_to?("split") || !content.split(",").all? {|i| is_number?( i ) })
           result += "solr_geom field should be all numbers. "
         end
       rescue
-        result += "unknown error parsing row. "
+        Rails.logger.error("Unknown error parsing row")
+      end
+    end
+    return result
+  end
+
+  def is_valid_string?(content)
+    result = false
+    content.chars.inject("") do |str, char|
+      if !( char.ascii_only? and (char.ord < 32 or char.ord == 127) )
+        result = true
+      else
+        result = false
+        break
       end
     end
 
     return result
   end
+
 
   def dirMissing dir
     marker = "===================================\n"
@@ -159,7 +153,7 @@ class DataIngest
     
     list_of_files = getfilelist(File.join(uploadpath, "*"))
     for uploadfile in list_of_files
-
+      puts "Processing #{uploadfile}"
       prefix = getfileprefix(uploadfile)
       if prefix.length > 0
         
@@ -167,21 +161,43 @@ class DataIngest
         totalrecs = 0
         ingestedrecs = 0
         index = 1
-        CSV.foreach(File.join(uploadpath, uploadfile), headers: true, encoding: 'iso-8859-1:utf-8' ) do |row|
-          errmsg = validaterecord(row)
 
-          if errmsg.length > 0
-            errorcontent += "row" + index.to_s + ":" + errmsg + "\n\n"
-          else
-            solrdata = solrdatahash(row)
-            Blacklight.default_index.connection.add(solrdata)
-            Blacklight.default_index.connection.commit
-            ingestedrecs += 1
-          end
-
-          totalrecs += 1
-          index += 1
+        file_array = []
+        csv = nil
+        file_error = false
+        begin
+          csv = CSV::parse(File.open(File.join(uploadpath, uploadfile), "r:UTF-8", &:read))
+        rescue ArgumentError => e
+          errorcontent += "#{uploadfile} could not be read. #{e}"            
+          file_error = true
         end
+        if csv
+          fields = csv.shift.map { |f| f.downcase.gsub(" ", "_")}
+          csv_hash = csv.collect { |record| Hash[*fields.zip(record).flatten] }
+          csv_hash.each do |row|
+            puts "Processing row #{index.to_s}"
+            errmsg = validaterecord(row)
+            if errmsg.length > 0
+              errorcontent += "row " + index.to_s + ": " + errmsg + "\n\n"
+            else
+              solrdata = formatsolrdata(row)
+              begin
+                Blacklight.default_index.connection.add(solrdata)
+                Blacklight.default_index.connection.commit
+                ingestedrecs += 1
+              rescue
+                errorcontent += "row #{index.to_s}: There was an error committing this record to solr\n\n"
+              end
+            end
+
+            totalrecs += 1
+            index += 1
+            if totalrecs - ingestedrecs >= 20
+              errorcontent += "#{uploadfile} exceeded the error limit. Quitting after line #{index}."
+              break
+            end
+          end
+        end        
 
         # create log report file
         logfilename = File.join(logpath, uploadfile + "_" + Time.now().strftime("%Y%m%d%H%M%S").to_s + ".log.txt")
@@ -189,7 +205,7 @@ class DataIngest
         createreport(logfilename, logcontent)
 
         # create error report file
-        if totalrecs != ingestedrecs
+        if totalrecs != ingestedrecs || file_error
           errorfilename = File.join(errorpath, uploadfile + "_" + Time.now().strftime("%Y%m%d%H%M%S").to_s + ".error.txt")
           createreport(errorfilename, uploadfile + "\n" + errorcontent)
         end
@@ -200,9 +216,7 @@ class DataIngest
         FileUtils.mv(src, dest)
       
       end
-
     end
-    
   end
 
 end
