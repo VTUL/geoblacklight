@@ -13,24 +13,25 @@ class DataIngest
     "dc_rights_s": {required: true},
     "dct_provenance_s": {required: true},
     "dct_references_s": {required: false},
-    "dc_creator_sm": {required: true},
-    "dc_language_sm": {required: true},
-    "dc_publisher_sm": {required: true},
-    "dc_type_s": {required: true},
-    "dct_spatial_sm": {required: true},
+    "dc_creator_sm": {required: false},
+    "dc_language_sm": {required: false},
+    "dc_publisher_sm": {required: false},
+    "dc_type_s": {required: false},
+    "dct_spatial_sm": {required: false},
     "dct_temporal_sm": {required: false},
     "dct_issued_dt": {required: false},
-    "dct_ispartof_sm": {required: true},
+    "dct_ispartof_sm": {required: false},
     "solr_geom": {required: true},
     "georss:polygon": {required: false},
     "dc_title_s": {required: true},
-    "dc_description_s": {required: true},
-    "dc_format_s": {required: true},
+    "dc_description_s": {required: false},
+    "dc_format_s": {required: false},
     "dc_subject_sm": {required: false},
-    "layer_id_s": {required: true},
+    "layer_id_s": {required: false},
     "layer_modified_dt": {required: false},
     "layer_slug_s": {required: true},
-    "layer_geom_type_s": {required: true}
+    "layer_geom_type_s": {required: false},
+    "geoblacklight_version": {required: true}
   }
     
   def createreport(filename, content)
@@ -178,24 +179,20 @@ class DataIngest
             puts "Processing row #{index.to_s}"
             errmsg = validaterecord(row)
             if errmsg.length > 0
-              errorcontent += "row " + index.to_s + ": " + errmsg + "\n\n"
+              errorcontent += "row " + (index + 1).to_s + ": " + errmsg + "\n\n"
             else
               solrdata = formatsolrdata(row)
               begin
                 Blacklight.default_index.connection.add(solrdata)
                 Blacklight.default_index.connection.commit
                 ingestedrecs += 1
-              rescue
-                errorcontent += "row #{index.to_s}: There was an error committing this record to solr\n\n"
+              rescue StandardError => e 
+		errorcontent += "row #{(index + 1).to_s}: There was an error committing this record to solr. Message: #{e.message}\n\n"
               end
             end
 
             totalrecs += 1
             index += 1
-            if totalrecs - ingestedrecs >= 20
-              errorcontent += "#{uploadfile} exceeded the error limit. Quitting after line #{index}."
-              break
-            end
           end
         end        
 
