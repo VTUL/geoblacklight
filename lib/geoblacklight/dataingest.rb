@@ -58,6 +58,7 @@ class DataIngest
 
   def formatsolrdata(content)
     timestring = Time.now().strftime("%Y-%m-%dT%H:%M:%SZ") 
+    content = content.merge(content) { |k, v1, v2| sanitize_string v2 }
 
     if !content['dct_references_s'].nil?
       content['dct_references_s'] = "{\"http://schema.org/downloadUrl\":\"" + content['dc_identifier_s'] + "\",\"http://www.opengis.net/def/serviceType/ogc/wcs\":\"" + content['dct_references_s'] + "\"}"
@@ -100,9 +101,6 @@ class DataIngest
         if @@fields.key?(key.to_sym) && @@fields[key.to_sym][:required] && content.blank?
           result += "#{key} is required but empty. "
 
-        elsif !is_valid_string?(content)
-          result += "#{key} contains invalid characters. "
-    
         elsif key == "dc_identifier_s" && !is_valid_url(content)
           result += "dc_identifier_s field is not a valid URL. "
       
@@ -119,17 +117,18 @@ class DataIngest
     return result
   end
 
-  def is_valid_string?(content)
-    result = false
-    content.chars.inject("") do |str, char|
-      if !( char.ascii_only? and (char.ord < 32 or char.ord == 127) )
-        result = true
-      else
-        result = false
-        break
-      end
+  def sanitize_string(content)
+    if !content.nil?
+      encoding_options = {
+        :invalid           => :replace,
+        :undef             => :replace,
+        :replace           => ' ',
+        :universal_newline => true
+      }
+      result = content.encode(Encoding.find('ASCII'), encoding_options).squish
+    else
+      result = nil
     end
-
     return result
   end
 
