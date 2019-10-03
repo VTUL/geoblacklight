@@ -2,7 +2,16 @@
 APPLICATION_LOGO_URL: 'http://geoblacklight.org/images/geoblacklight-logo.png'
 
 # Carto OneClick Service https://carto.com/engine/open-in-carto/
-CARTO_ONECLICK_LINK: 'http://oneclick.cartodb.com/'
+CARTO_ONECLICK_LINK: 'http://oneclick.carto.com/'
+
+# Hide Carto export link
+# CARTO_HIDE: true
+
+# Hide ArcGIS export link
+# ARCGIS_HIDE: true
+
+# ArcGIS Online Base URL
+ARCGIS_BASE_URL: 'https://www.arcgis.com/home/webmap/viewer.html'
 
 # Download path can be configured using this setting
 #DOWNLOAD_PATH: "./tmp/cache/downloads"
@@ -10,7 +19,13 @@ CARTO_ONECLICK_LINK: 'http://oneclick.cartodb.com/'
 # DEPRECATED Main Solr geometry field used for spatial search and bounding box. Should be type 'rpt'
 GEOMETRY_FIELD: 'solr_geom'
 
-#Solr field mappings
+# The bq boost value for spatial search matches within a bounding box
+BBOX_WITHIN_BOOST: '10'
+
+# The bf boost value for overlap ratio
+OVERLAP_RATIO_BOOST: '2'
+
+# Solr field mappings
 FIELDS:
   :FILE_FORMAT: 'dc_format_s'
   :GEOMETRY: 'solr_geom'
@@ -28,15 +43,17 @@ FIELDS:
   :PART_OF: 'dct_isPartOf_sm'
   :TEMPORAL: 'dct_temporal_sm'
   :TITLE: 'dc_title_s'
+  :SOURCE: 'dc_source_sm'
 
 # Institution deployed at
 INSTITUTION: 'Virginia Tech'
 
 # Metadata shown in tool panel
 METADATA_SHOWN:
+  - 'mods'
   - 'fgdc'
   - 'iso19139'
-  - 'mods'
+  - 'html'
 
 # (For external Download) timeout and open_timeout parameters for Faraday
 TIMEOUT_DOWNLOAD: 16
@@ -64,7 +81,7 @@ WMS_PARAMS:
   :EXCEPTIONS: 'application/json'
   :INFO_FORMAT: 'text/html'
 
-# Settings for leaflet 
+# Settings for leaflet
 OPACITY_CONTROL: &opacity_control
   CONTROLS:
     - 'Opacity'
@@ -73,6 +90,17 @@ LEAFLET:
   MAP:
   LAYERS:
     DETECT_RETINA: true
+    INDEX:
+      DEFAULT: &default
+        color: "#1eb300"
+        weight: "1"
+        radius: "4"
+      UNAVAILABLE:
+        <<: *default
+        color: "#b3001e"
+      SELECTED:
+        <<: *default
+        color: "#006bde"
   VIEWERS:
     WMS:
       <<: *opacity_control
@@ -84,3 +112,16 @@ LEAFLET:
       <<: *opacity_control
     IMAGEMAPLAYER:
       <<: *opacity_control
+
+# Toggle the help text feature that offers users context
+HELP_TEXT:
+  viewer_protocol:
+      - 'dynamic_map_layer'
+      - 'feature_layer'
+      - 'iiif'
+      - 'iiif_manifest'
+      - 'image_map_layer'
+      - 'index_map'
+      - 'tiled_map_layer'
+      - 'wms'
+      - 'oembed'

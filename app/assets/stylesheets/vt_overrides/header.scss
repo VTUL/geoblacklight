@@ -1,11 +1,10 @@
 /* VT specific styles */
 @import 'colors';
 
-.navbar-inverse {
+#header-navbar {
+  padding: 0 1rem;
   background-color: $hokie-maroon;
   border-color: $hokie-orange;
-}
-#header-navbar {
   .navbar-vt {
     background: image_url('vt_overrides/vt_logo.svg') left center no-repeat transparent;
     width: 150px;
@@ -20,10 +19,10 @@
   }
   .navbar-home {
     display: inline-block;
-    font-size: 2.25rem;
+    font-size: 1.7rem;
     font-weight: 200;
     color: white;
-    padding: 10px 0;
+    padding: 0;
     vertical-align: top;
   }
   .navbar-home:hover {

@@ -1,3 +1,4 @@
+//= require handlebars.runtime
 //= require geoblacklight/geoblacklight
 //= require geoblacklight/basemaps
 //= require geoblacklight/controls
@@ -6,4 +7,4 @@
 //= require geoblacklight/downloaders
 //= require leaflet-iiif
 //= require esri-leaflet
-//= require readmore.min
+//= require readmore
