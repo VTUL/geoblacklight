@@ -103,5 +103,11 @@ Rails.application.configure do
       params = event.payload[:params].reject { |k| %w(controller action).include?(k) }
       { "params" => params }
     end
+  else
+    # Create a standard logger that writes to log/production.log and rotates them.
+    # This ages the logfile once it reaches a certain size. Leave 12 “old” log files where 
+    # each file is about 10485760 bytes.
+    config.logger = Logger.new(Rails.root.join('log', "#{Rails.env}.log"), 12, 10485760)
+    config.log_level = :warn
   end
 end
